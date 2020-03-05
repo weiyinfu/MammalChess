@@ -1,0 +1,173 @@
+.flex-center() {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+#main {
+  .flex-center;
+  flex-direction: column;
+  background-color: #222222;
+  width: 100%;
+  height: 100%;
+}
+
+@header-height: 60px;
+@footer-height: 30px;
+@header-footer-height: @header-height + @footer-height;
+
+.header {
+  //顶部控制按钮区域
+  width: 100%;
+  height: @header-height;
+  .flex-center;
+
+  & > * {
+    height: 100%;
+    font-size: 15px;
+    border-width: 2px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0 2px;
+  }
+
+  & > div {
+    .flex-center;
+    background-color: whitesmoke;
+  }
+}
+
+.footer {
+  //底部状态区
+  width: 100%;
+  height: @footer-height;
+  background: cornsilk;
+  .flex-center;
+  overflow: hidden;
+
+  & > * {
+    display: flex;
+    height: 100%;
+    .flex-center;
+  }
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sep {
+    width: 2px;
+    height: 100%;
+    background: black;
+    margin: 0 6px;
+  }
+}
+
+.body {
+  width: 100%;
+  height: calc(~"100% - " @header-footer-height);
+  flex-direction: column;
+  .flex-center;
+  position: relative;
+  //使用overflow:hidden;是弱者的表现，强者不需要overflow:hidden;此处用到了动画导致滚动条一闪一闪的。
+
+  .board {
+    //棋盘区域
+    background: beige;
+    padding: 4px;
+  }
+}
+
+.grid {
+  //棋子
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  user-select: none;
+  border-style: solid;
+  border-width: 1px;
+  margin: 1px;
+}
+
+.info {
+  //你赢了，你输了，和棋提示面板
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0.8;
+  .flex-center;
+  background: black;
+
+  div {
+    z-index: 1000;
+    border-radius: 10px;
+    padding: 2px;
+    color: white;
+  }
+}
+
+.thinking {
+  //计算机正在思考
+  position: absolute;
+  color: red;
+  background: white;
+  opacity: 0.8;
+}
+
+@phone-width: 1000px; //移动设备宽度
+
+
+@media screen and (max-width: @phone-width) {
+  @rotate-deg: 3deg;
+  @keyframes turn {
+    0% {
+      transform: rotate(0);
+    }
+    25% {
+      transform: rotate(-@rotate-deg);
+    }
+    50% {
+      transform: rotate(0);
+    }
+    75% {
+      transform: rotate(@rotate-deg);
+    }
+    100% {
+      transform: rotate(0);
+    }
+  }
+}
+
+@media screen and (min-width: @phone-width) {
+  @shift-size: 3px;
+  @blur-size: 5px;
+  @keyframes turn {
+    0% {
+      text-shadow: @shift-size 0px @blur-size;
+    }
+    25% {
+      text-shadow: 0px @shift-size @blur-size;
+    }
+    50% {
+      text-shadow: -@shift-size 0 @blur-size;
+    }
+    75% {
+      text-shadow: 0px -@shift-size @blur-size;
+    }
+    100% {
+      text-shadow: @shift-size 0px @blur-size;
+    }
+  }
+}

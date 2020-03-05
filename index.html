@@ -1,0 +1,461 @@
+<html>
+<head>
+    <title>一象二狮</title>
+    <meta charset="UTF-8">
+    <link rel="icon" sizes="any" mask href="./lion.svg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+    <link rel="stylesheet/less" type="text/css" href="index.less"/>
+    <script src="https://cdn.bootcss.com/less.js/3.10.3/less.min.js"></script>
+    <script src="https://cdn.bootcss.com/vue/2.6.11/vue.js"></script>
+    <script src="https://cdn.bootcss.com/axios/0.19.2/axios.min.js"></script>
+    <script src="game.js"></script>
+</head>
+<body>
+<div id="main">
+    <div class="header">
+        <!--选择棋子样式-->
+        <select v-model="conf.animalMap" @change="saveConf">
+            <option v-for="(v,k) in ANIMAL_MAP" :value="k">使用{{v.name}}</option>
+        </select>
+        <button @click="newGame">新游戏</button>
+        <div>
+            <span>静音</span>
+            <input v-model="conf.mute"
+                   type="checkbox"
+                   @change="saveConf"
+                   style="width:100%;height:100%;">
+        </div>
+    </div>
+    <!--棋盘区域，4×4个grid-->
+    <div class="body" ref="body">
+        <div class="board" v-if="game">
+            <div v-for="row in 4" style=" display: flex;">
+                <div v-for="col in 4" class="grid" :style="gridStyle(get(row,col))" @click="choose(get(row,col))">
+                    {{get(row,col)==lastMove.src?'💢':getAnimal(game.a[get(row,col)])}}
+                </div>
+            </div>
+        </div>
+        <!--游戏结束消息提示面板-->
+        <div class="info" v-if="info">
+            <div>{{info}}</div>
+        </div>
+        <!--AI正在思考-->
+        <div class="thinking" :style="{fontSize:gridSize*0.6+'px'}" v-if="turn===1">🍵</div>
+    </div>
+    <!--状态栏-->
+    <div class="footer" v-if="game">
+        <div>
+            <span>您的局势：</span> <span style="background-color: khaki;">{{randomChoose(aiScore<0?emotion.happy:emotion.sad)}}</span>&nbsp;
+        </div>
+        <div v-if="game.peaceClock>=game.PEACE_CLOCK*0.5">
+            <div class="sep"></div>
+            和棋倒计时：<span
+                style="background-color: khaki">{{game.PEACE_CLOCK-game.peaceClock}}</span>
+        </div>
+        <div>
+            <template v-if="lastMove.type==='eat'">
+                <div class="sep"></div>
+                <span :style="animalStyle(lastMove.srcChess)">{{getAnimal(lastMove.srcChess)}}</span>吃了
+                <span :style="animalStyle(lastMove.desChess)">{{getAnimal(lastMove.desChess)}}</span>
+            </template>
+            <template v-else-if="lastMove.type==='recover'">
+                <div class="sep"></div>
+                {{turn===0?'电脑':'您'}}翻出了<span
+                    :style="animalStyle(lastMove.srcChess)">{{getAnimal(lastMove.srcChess)}}</span>
+            </template>
+            <template v-else-if="lastMove.type==='move'">
+                <div class="sep"></div>
+                {{turn===0?'电脑':'您'}}移动了<span
+                    :style="animalStyle(lastMove.srcChess)">{{getAnimal(lastMove.srcChess)}}</span>
+            </template>
+        </div>
+    </div>
+    <audio src="res/capture.wav" ref="capture" preload="auto"></audio><!--有棋子被吃掉-->
+    <audio src="res/click.wav" ref="click" preload="auto"></audio><!--选中棋子的声音-->
+    <audio src="res/move.wav" ref="move" preload="auto"></audio><!--棋子移动音效-->
+    <audio src="res/lose.wav" ref="lose" preload="auto"></audio> <!--你输了音效-->
+    <audio src="res/win.wav" ref="win" preload="auto"></audio> <!--你赢了音效-->
+    <audio src="res/draw.wav" ref="peace" preload="auto"></audio><!--和棋-->
+    <audio src="res/start.wav" ref="start" preload="auto"></audio><!--游戏开始音效-->
+    <audio src="res/illegal.wav" ref="illegal" preload="auto"></audio><!--错误操作音效-->
+</div>
+</body>
+<script>
+    const ANIMAL_MAP = {
+        // 编码说明：0-7为红棋,8-15为绿旗，16表示未翻，17表示空白
+        chinese: {
+            chars: ["象", "狮", "豹", "虎", "狼", "狗", "猫", "鼠", "象", "狮", "豹", "虎", "狼", "狗", "猫", "鼠", "+", " "],
+            name: "汉字"
+        },
+        hieroglyph: {
+            chars: ["🐘", "🦁", "🐆", "🐅", "🐺", "🐕", "🐈", "🐀", "🐘", "🦁", "🐆", "🐅", "🐺", "🐕", "🐈", "🐀", "🕸", ' '],
+            name: "象形"
+        },
+        number: {
+            chars: [1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, '+', ' '],
+            name: "阿拉伯数字"
+        },
+        chineseNumber: {
+            chars: ['一', '二', '三', '四', '五', '六', '七', '八', '一', '二', '三', '四', '五', '六', '七', '八', '+', ' '],
+            name: "汉语数字"
+        }
+    }
+    //表情：用于表示局面的好坏
+    const emotion = {
+        sad: ['😞', '😟', '😠', '😡', '😢', '😣', '😥'],
+        happy: ['😀', '😁', '😂', '😃', '😄', '😅', '😆']
+    }
+    //着法类型
+    const MOVE_TYPE = {
+        eat: 'eat',
+        move: 'move',
+        recover: 'recover'
+    }
+    //棋子颜色
+    const COLORS = {
+        RED: '#ff8888',
+        GREEN: '#88ff88'
+    }
+    //轮次，轮到用户走则为0,轮到计算机走则为1
+    const TURN = {
+        USER: 0,
+        COMPUTER: 1,
+    }
+    const main = {
+        el: '#main',
+        data() {
+            return {
+                //游戏状态相关
+                game: null,
+                turn: 0,//轮到谁走棋，0表示用户，1表示电脑
+                //UI相关
+                gridSize: 0,//每个grid的大小
+                ANIMAL_MAP,//动物映射
+                chosen: -1,//用户选中的棋子
+                userColor: -1,//用户使用的花色，第一次翻到什么颜色就用什么颜色
+                //最后一次移动的棋子
+                lastMove: {
+                    type: null,//上一个操作的类型，取值为MOVE_TYPE中的内容
+                    src: -1,//刚刚移动的棋子的位置
+                    des: -1,//刚刚死亡的棋子的位置
+                    desChess: null,//刚刚死亡的棋子
+                    srcChess: null,//刚刚移动的棋子
+                },
+                info: '',//信息框的内容
+                //AI相关
+                ai: new Worker("ai.js"),
+                emotion,//表情符号常量列表
+                aiScore: 0,//ai判断出分数
+                aiConfig: {
+                    maxDepth: 10
+                },
+                //界面设置
+                conf: {
+                    mute: false,//是否静音
+                    minAiTime: 1000,//AI思考的最少时间，如果AI思考时间不足此时间，就会等待一段时间，
+                    animalMap: "hieroglyph",//用哪套字符显示动物
+                }
+            }
+        },
+        mounted() {
+            this.loadConf()
+            window.onresize = this.updateGridSize
+            this.updateGridSize()
+            this.newGame()
+            this.ai.onerror = (e) => {
+                console.log('AI error :')
+                console.log(e)
+            }
+        },
+        methods: {
+            loadConf() {
+                //加载配置
+                if (localStorage.conf)
+                    try {
+                        var conf = JSON.parse(localStorage.conf)
+                        for (var i in this.conf) {
+                            if (conf.hasOwnProperty(i)) {
+                                this.conf[i] = conf[i]
+                            }
+                        }
+                    } catch (e) {
+                        //加载配置出错了，清空配置
+                        console.log('load config error')
+                        localStorage.conf = null
+                    }
+            },
+            saveConf() {
+                //保存配置
+                localStorage.conf = JSON.stringify(this.conf)
+            },
+            randomChoose(a) {
+                return a[Math.floor(Math.random() * a.length)]
+            },
+            playSound(soundName) {
+                if (!this.conf.mute)
+                    this.$refs[soundName].play()
+            },
+            updateGridSize() {
+                //根据窗口大小自动调整每个格子的大小
+                const rect = this.$refs.body.getBoundingClientRect()
+                const size = Math.min(rect.width, rect.height) - 20
+                this.gridSize = Math.floor(size / 4)
+            },
+            eat(src, des) {
+                //src处的棋子吃掉des处的棋子
+                var eaten = this.game.a[des]
+                if (eaten !== 17)//如果目标处有棋子，那么就要吃掉它
+                {
+                    this.lastMove.type = MOVE_TYPE.eat
+                    this.lastMove.src = src
+                    this.lastMove.des = des
+                    this.lastMove.desChess = eaten
+                    this.lastMove.srcChess = this.game.a[src]
+                    this.playSound('capture')
+                } else {
+                    //目标处没有棋子，走得是空步
+                    this.lastMove.type = MOVE_TYPE.move
+                    this.lastMove.src = src
+                    this.lastMove.des = des
+                    this.lastMove.srcChess = this.game.a[src]
+                    this.lastMove.desChess = null
+                    this.playSound('move')
+                }
+                this.chosen = -1
+                this.game.eat(src, des)
+                //eat发生后，数组a已经发生了改变，但是要想让UI发生改变，此处应该使用$set
+                this.$set(this.game.a, des, this.game.a[des])
+                this.$set(this.game.a, src, this.game.a[src])
+            },
+            recover(ind) {
+                //翻开ind处的棋子
+                this.game.recover(ind)
+                this.$set(this.game.a, ind, this.game.a[ind])
+                const chessId = this.game.a[ind]
+                if (this.game.unknown.length === 15) {
+                    //如果未知元素为15个，那么第一个翻出来的颜色就可以决定用户的花色
+                    this.userColor = chessId < 8 ? 0 : 1
+                }
+                this.chosen = -1
+                this.lastMove.src = -1
+                this.lastMove.desChess = null
+                this.lastMove.des = ind
+                this.lastMove.srcChess = chessId
+                this.lastMove.type = MOVE_TYPE.recover
+            },
+            illegal() {
+                //非法操作duang的一声
+                this.playSound('illegal')
+            },
+            choose(ind) {
+                //用户点击了ind处的棋子
+                //如果不该着用户走，那么直接返回
+                if (this.turn === TURN.COMPUTER) return
+                if (this.game.a[ind] === 16) {//如果是未知元素，用户翻新牌
+                    if (this.game.canRecover(ind)) {
+                        this.recover(ind)
+                    } else {
+                        this.illegal()
+                        return
+                    }
+                } else if (this.game.a[ind] === 17) {
+                    //如果是空白，那么移动棋子
+                    if (this.chosen === -1) return//如果没有选择直接点击空白处
+                    if (!this.game.isNeibor(this.chosen, ind)) {
+                        //不合法的移动
+                        this.illegal()
+                        return
+                    }
+                    this.eat(this.chosen, ind)
+                } else {
+                    //如果点击棋子
+                    if (this.chosen === -1) {
+                        //如果未选中棋子，则表示第一次选中棋子
+                        const srcColor = this.game.a[ind] < 8 ? 0 : 1
+                        if (srcColor === this.userColor) {
+                            //用户只能控制跟它一样花色的棋子
+                            this.chosen = ind
+                            this.playSound('click')
+                        }
+                        return
+                    }
+                    //如果已经选中棋子
+                    var srcColor = this.game.a[this.chosen] < 8
+                    var desColor = this.game.a[ind] < 8
+                    if (srcColor === desColor) {
+                        //颜色相同，改变选择的棋子
+                        this.chosen = ind
+                        this.playSound('click')
+                        return
+                    }
+                    //颜色不同，吃掉对方的棋子
+                    if (this.game.canEat(this.chosen, ind)) {
+                        //如果能吃
+                        this.eat(this.chosen, ind)
+                    } else {
+                        this.illegal()
+                        return
+                    }
+                }
+                if (this.isOver()) {
+                    this.over()
+                    return
+                }
+                this.turn = TURN.COMPUTER //轮到计算机了
+                this.computer()
+            },
+            computer() {
+                //用这个随机数作为此次请求的标志
+                const randomKey = Math.floor(Math.random() * 1e9)
+                const thinkBeginTime = new Date().getTime()
+                const aiCallback = (ans) => {
+                    if (this.turn === TURN.USER) throw '不该着AI下呢'
+                    const op = ans.strategy
+                    this.aiScore = ans.score
+                    if (op === null) {
+                        //如果AI没有作出决策，那么AI认输
+                        this.over()
+                        return
+                    }
+                    if (op.length === 2) {
+                        var [src, des] = op
+                        var srcColor = this.game.a[src] < 8 ? 0 : 1
+                        if (srcColor === this.userColor) {
+                            throw 'computer color error'
+                        }
+                        //如果是棋子
+                        if (!this.game.canEat(src, des)) {
+                            throw 'AI返回的操作不合理：不能吃'
+                        }
+                        this.eat(src, des)
+                    } else if (op.length === 1) {
+                        if (!this.game.canRecover(op[0])) throw "cannot recover " + op[0]
+                        this.recover(op[0])
+                    } else {
+                        throw 'AI返回的操作无法识别'
+                    }
+                    if (this.isOver()) {
+                        this.over()
+                    }
+                    this.turn = TURN.USER//轮到人走了
+                }
+                this.ai.onmessage = (event) => {
+                    if (event.data.id !== randomKey) {
+                        console.log('got unexpected randomKey')
+                        return
+                    }
+                    //收到AI发回的消息
+                    //如果轮到用户下棋，忽略AI的消息
+                    console.log('AI reply')
+                    console.log(event.data)
+                    const now = new Date().getTime()
+                    if (now - thinkBeginTime < this.conf.minAiTime) {
+                        setTimeout(() => aiCallback(event.data), this.conf.minAiTime - (now - thinkBeginTime))
+                    } else {
+                        aiCallback(event.data)
+                    }
+                }
+                const smallChessCount = this.game.a.reduce((s, x) => s + (x < 8 ? 1 : 0), 0),
+                    bigChessCount = this.game.a.reduce((s, x) => (x >= 8 && x < 16 ? 1 : 0), 0)
+                //动态maxDepth，不然搜索时间太长
+                let maxDepth = this.aiConfig.maxDepth
+                if (this.game.unknown.length > 8) {
+                    maxDepth = Math.min(maxDepth, 5)
+                }
+                if (this.game.unknown.length === 0) {
+                    //如果已经没有不知道的牌了
+                    if (Math.min(smallChessCount, bigChessCount) < 3) {
+                        //进入残局阶段，搜索深度加深
+                        maxDepth += 2
+                    }
+                }
+                this.ai.postMessage({
+                    a: this.game.a,
+                    unknown: this.game.unknown,
+                    computerColor: 1 - this.userColor,
+                    maxDepth,
+                    id: randomKey,
+                })
+            },
+            isOver() {
+                return this.game.getState() !== Game.UNSURE
+            },
+            over() {
+                //游戏结束
+                const gameState = this.game.getState();
+                if (gameState === Game.PEACE) {
+                    this.info = '和棋！'
+                    this.playSound('peace')
+                } else {
+                    if (gameState === Game.UNSURE) {
+                        throw "shouldn't call over() because gameState is unsure"
+                    }
+                    const winColor = gameState === Game.FIRST_WIN ? 0 : 1
+                    if (this.userColor === winColor) {
+                        //轮到用户走棋
+                        this.info = '您赢了'
+                        this.playSound('win')
+                    } else {
+                        this.info = '您输了'
+                        this.playSound('lose')
+                    }
+                }
+            },
+            get(row, col) {
+                return (row - 1) * 4 + col - 1
+            },
+            getAnimal(ind) {
+                if (!(ind >= 0 && ind <= 17)) throw 'getAnimal got error index: ind=' + ind
+                return this.ANIMAL_MAP[this.conf.animalMap].chars[ind]
+            },
+            newGame() {
+                //新游戏
+                this.game = Game.newGame()
+                this.turn = 0
+                this.userColor = 0
+                this.chosen = -1
+                this.lastMove = {src: -1, des: -1, srcChess: null, desChess: null, type: null}
+                this.playSound('start')
+                this.info = ''
+            },
+            animalStyle(chess) {
+                return {
+                    background: chess < 8 ? COLORS.RED : COLORS.GREEN
+                }
+            },
+            gridStyle(id) {
+                //不同的格子跟据棋子的不同显示不同
+                const style = {}
+                const chess = this.game.a[id]
+                if (chess < 8) {
+                    style.backgroundColor = COLORS.RED
+                } else if (chess < 16) {
+                    style.backgroundColor = COLORS.GREEN
+                }
+                Object.assign(style, {
+                    width: this.gridSize + 'px',
+                    height: this.gridSize + 'px',
+                    fontSize: this.gridSize * 0.8 + "px"
+                })
+                if (this.chosen === id) {
+                    style.borderWidth = '5px'
+                }
+                if (this.lastMove.des === id) {
+                    style.animation = 'turn 4s linear infinite'
+                }
+                if (this.lastMove.src === id) {
+                    style.color = 'grey'
+                    style.opacity = 0.3
+                }
+                return style
+            },
+        }
+    }
+    var haha = null
+    document.onreadystatechange = () => {
+        if (document.readyState !== 'complete') return
+        main.el = "#main"
+        haha = new Vue(main)
+    }
+</script>
+</html>
