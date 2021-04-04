@@ -134,7 +134,7 @@ func (self *AlphaBetaSolver) dfs(x *Node, depth int, who int, lower float64, upp
 				if depth+1 == maxDepth {
 					nextMaxDepth++
 				}
-				s += self.dfs(x, depth+1, 1-who, -lower, -score, recover+1, nextMaxDepth)
+				s += self.dfs(x, depth+1, 1-who, -upper, -score, recover+1, nextMaxDepth)
 				x.undo(mo)
 			}
 			sonScore = s / float64(x.Unknown.Size())
