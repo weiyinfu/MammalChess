@@ -1,7 +1,7 @@
 const getAi = require('./ai.js')
 const ai = getAi()
 const Game = require('./game')
-
+require("axios")
 function one() {
     /**
      * 在全局都已经知道的情况下，AI能否走出最优解

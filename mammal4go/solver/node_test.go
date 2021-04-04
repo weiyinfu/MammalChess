@@ -1,14 +1,14 @@
-package alphabeta
+package solver
 
 import (
 	"fmt"
-	"github.com/weiyinfu/MammalChess/mammal4go/judger"
 	"github.com/weiyinfu/MammalChess/mammal4go/util"
 	"math/rand"
 	"testing"
 )
 
 func check(node *Node) {
+	//校验结点是否正确
 	x := NewNode(node.Board, node.Unknown.Get())
 	util.Assert(x.P[0].Eq(&node.P[0]), fmt.Sprintf("P[0] should be equal %v %v", x.P[0], node.P[0]))
 	util.Assert(x.P[1].Eq(&node.P[1]), fmt.Sprintf("P[1] should be equal %v %v", x.P[1], node.P[1]))
@@ -21,14 +21,19 @@ func TestNewNode(t *testing.T) {
 	var board []int
 	var unknown []int
 	for i := 0; i < 16; i++ {
-		board = append(board, judger.CHESS_UNKNOWN)
+		board = append(board, CHESS_UNKNOWN)
 		unknown = append(unknown, i)
 	}
 	node := NewNode(board, unknown)
 	turn := 0
 	var realMoves []*Move
-
+	round := 0
 	for {
+		round += 1
+		if round > 100000 {
+			fmt.Println("无穷无尽")
+			break
+		}
 		moveList := node.generateMoves(turn, GENERATE_ALL)
 		if len(moveList) == 0 {
 			break
@@ -55,7 +60,7 @@ func TestNewNode2(t *testing.T) {
 	var board []int
 	var unknown []int
 	for i := 0; i < 16; i++ {
-		board = append(board, judger.CHESS_UNKNOWN)
+		board = append(board, CHESS_UNKNOWN)
 		unknown = append(unknown, i)
 	}
 	node := NewNode(board, unknown)
@@ -71,8 +76,9 @@ func TestNewNode3(t *testing.T) {
 	node := NewNode(board, []int{})
 	allMoves := node.generateMoves(0, GENERATE_ALL)
 	fmt.Println(node.repr())
+	fmt.Println(len(allMoves))
 	for _, m := range allMoves {
-		fmt.Println(*m)
+		fmt.Println(node.showMove(m))
 	}
 }
 

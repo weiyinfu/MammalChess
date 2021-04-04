@@ -1,5 +1,11 @@
 package util
 
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
 func Assert(x bool, desc string) {
 	if x {
 
@@ -27,4 +33,16 @@ func ArrayCopy(a []int) []int {
 		b = append(b, v)
 	}
 	return b
+}
+func GetIntList(s string) []int {
+	//s是一个逗号隔开的int列表组成的字符串
+	var a []int
+	for _, i := range strings.Fields(strings.ReplaceAll(s, ",", " ")) {
+		v, err := strconv.Atoi(i)
+		if err != nil {
+			panic(fmt.Sprintf("invalid param err=%v i=%v", err, i))
+		}
+		a = append(a, v)
+	}
+	return a
 }

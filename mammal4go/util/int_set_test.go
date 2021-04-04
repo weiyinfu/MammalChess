@@ -1,13 +1,12 @@
-package alphabeta_test
+package util
 
 import (
 	"fmt"
-	"github.com/weiyinfu/MammalChess/mammal4go/judger/alphabeta"
 	"testing"
 )
 
 func TestIntSet_Add(t *testing.T) {
-	x := alphabeta.NewIntSet(4, 4)
+	x := NewIntSet(4)
 	x.Add(3)
 	fmt.Println(x.Get(), x)
 	x.Add(2)

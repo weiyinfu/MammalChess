@@ -1,9 +1,10 @@
-package judger
+package solver
 
 import (
 	"math/rand"
 )
 
+//随机走子的judger，比较简单的写法
 type RandSolver struct {
 }
 
@@ -19,11 +20,11 @@ func (RandSolver) Solve(board []int, unknown []int, computerColor int) []int {
 func GetAllMoves(board []int, computerColor int) [][]int {
 	var moves [][]int
 	for ind, chess := range board {
-		if chess == 16 {
+		if chess == CHESS_UNKNOWN {
 			moves = append(moves, []int{ind})
 			continue
 		}
-		if chess == 17 {
+		if chess == CHESS_SPACE {
 			continue
 		}
 		if chess < 8 && computerColor == 0 || chess >= 8 && computerColor == 1 {
@@ -37,6 +38,7 @@ func GetAllMoves(board []int, computerColor int) [][]int {
 }
 
 func canGo(board []int, pos int) [][]int {
+	//获取pos处的棋子所有可去的位置
 	x, y := pos/4, pos%4
 	var tos [][]int
 	for _, d := range DIRECTIONS {
@@ -53,41 +55,4 @@ func canGo(board []int, pos int) [][]int {
 		}
 	}
 	return tos
-}
-
-func CanEat(animal, food int) bool {
-	if food == CHESS_UNKNOWN {
-		return false
-	}
-	if food == CHESS_SPACE {
-		return true
-	}
-	if (animal < 8) == (food < 8) {
-		//same color cannot eat
-		return false
-	}
-	if food >= 8 {
-		food -= 8
-	}
-	if animal >= 8 {
-		animal -= 8
-	}
-	if animal == 7 {
-		if food == 0 || food == 7 {
-			return true
-		}
-		return false
-	}
-	if animal == 0 {
-		if food == 8 {
-			return false
-		}
-		//elephant can eat everything
-		return true
-	}
-	//可以吃掉
-	if animal <= food {
-		return true
-	}
-	return false
 }

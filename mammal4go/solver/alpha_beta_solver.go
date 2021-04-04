@@ -1,7 +1,6 @@
-package alphabeta
+package solver
 
 import (
-	"github.com/weiyinfu/MammalChess/mammal4go/judger"
 	"math"
 	"math/rand"
 	"sort"
@@ -12,7 +11,7 @@ TODO：在搜索中引入状态记忆，使用LRU记住最长遇到的若干状�
 这个空间越大，对时间提升就越大
 */
 type AlphaBetaSolver struct {
-	move       []Move
+	moves      map[Move]float64
 	eye        WeightJudger
 	maxDepth   int //最大搜索深度
 	maxRecover int //每条搜索路径上最大翻牌次数，翻牌次数太多会导致搜索变慢
@@ -22,22 +21,48 @@ func NewAlphaBetaSolver(maxDepth int, maxRecover int) *AlphaBetaSolver {
 	return &AlphaBetaSolver{
 		maxDepth:   maxDepth,
 		maxRecover: maxRecover,
+		moves:      map[Move]float64{},
 	}
 }
+
 func (self *AlphaBetaSolver) Solve(board []int, unknown []int, computerColor int) []int {
 	no := NewNode(board, unknown)
-	self.move = nil //运行之前，清空move记录
-	self.dfs(no, 0, computerColor, -1e9, 1e9, 0, self.maxDepth)
-	if len(self.move) == 0 {
+	m := self.SolveNode(no, computerColor)
+	if m == nil {
 		return nil
 	}
-	ind := rand.Intn(len(self.move))
-	m := self.move[ind]
-	if m.ty == MOVE_EAT {
-		return []int{m.src, m.des}
+	if m.Type == MOVE_EAT {
+		return []int{m.Src, m.Des}
 	} else {
-		return []int{m.src}
+		return []int{m.Src}
 	}
+}
+func (self *AlphaBetaSolver) SolveNode(node *Node, computerColor int) *Move {
+	self.moves = map[Move]float64{} //运行之前，清空move记录
+	self.dfs(node, 0, computerColor, -1e9, 1e9, 0, self.maxDepth)
+	if len(self.moves) == 0 {
+		return nil
+	}
+	type moveScore struct {
+		move  Move
+		score float64
+	}
+	var a []moveScore
+	for move, score := range self.moves {
+		a = append(a, moveScore{move: move, score: score})
+	}
+	sort.Slice(a, func(i, j int) bool {
+		return a[i].score > a[j].score
+	})
+	sz := len(a)
+	for i, v := range a {
+		if v.score < a[0].score {
+			sz = i
+			break
+		}
+	}
+	ind := rand.Intn(sz)
+	return &a[ind].move
 }
 func matai(score float64, depth int) float64 {
 	/**
@@ -87,11 +112,11 @@ func (self *AlphaBetaSolver) dfs(x *Node, depth int, who int, lower float64, upp
 	for _, mo := range moves {
 		//当前移动所产生的的子局面的分数
 		var sonScore float64
-		if mo.ty == MOVE_EAT {
+		if mo.Type == MOVE_EAT {
 			x.do(mo)
 			//杀招裁剪，如果是吃子，则可以继续往下搜索
 			nextMaxDepth := maxDepth
-			if mo.eat != judger.CHESS_SPACE {
+			if mo.Eat != CHESS_SPACE {
 				//如果不是走向空位
 				if depth+1 == nextMaxDepth {
 					nextMaxDepth++
@@ -102,36 +127,27 @@ func (self *AlphaBetaSolver) dfs(x *Node, depth int, who int, lower float64, upp
 		} else {
 			s := 0.0
 			for _, be := range x.Unknown.Get() {
-				mo.moving = be
+				mo.Moving = be
 				x.do(mo)
 				//翻牌之后，继续向下搜索，不能立即停止
 				nextMaxDepth := maxDepth
 				if depth+1 == maxDepth {
 					nextMaxDepth++
 				}
-				s += self.dfs(x, depth+1, 1-who, -upper, -score, recover+1, nextMaxDepth)
+				s += self.dfs(x, depth+1, 1-who, -lower, -score, recover+1, nextMaxDepth)
 				x.undo(mo)
 			}
 			sonScore = s / float64(x.Unknown.Size())
 		}
-		if -sonScore >= score {
-			if depth == 0 {
-				//记录着法
-				if -sonScore == score {
-					//追平
-					self.move = append(self.move, *mo)
-				} else {
-					//创建了新的着法
-					self.move = []Move{*mo}
-				}
-			}
-			if -sonScore > score {
-				score = -sonScore
-				//score总是追求越大越好
-				if score >= upper {
-					//执行剪枝，你的分数太高了，对手一定不会让你达到
-					break
-				}
+		if depth == 0 { //记录着法
+			self.moves[*mo] = -sonScore
+		}
+		if -sonScore > score {
+			score = -sonScore
+			//score总是追求越大越好
+			if score >= upper {
+				//执行剪枝，你的分数太高了，对手一定不会让你达到
+				break
 			}
 		}
 	}
@@ -144,15 +160,15 @@ func sortMoves(x *Node, moves []*Move) {
 	sort.Slice(moves, func(i, j int) bool {
 		a := moves[i]
 		b := moves[j]
-		if a.ty == b.ty {
-			if a.ty == MOVE_NEW {
+		if a.Type == b.Type {
+			if a.Type == MOVE_NEW {
 				//两个都是翻新牌
 				return true
 			} else {
 				//两个都是吃子，谁吃的子大谁优先级高
 				//谁吃掉的东西重要让谁先走
-				desDif := a.eat - b.eat
-				srcDif := a.moving - b.moving
+				desDif := a.Eat - b.Eat
+				srcDif := a.Moving - b.Moving
 				//如果同样是吃子，让子力强的子先吃子
 				//如果同样是走空步，让子力强的子先走空步
 				if desDif == 0 {
@@ -163,7 +179,7 @@ func sortMoves(x *Node, moves []*Move) {
 			}
 		} else {
 			//优先吃子和动子，其次翻新牌
-			if a.ty == MOVE_NEW {
+			if a.Type == MOVE_NEW {
 				return false
 			}
 			return true

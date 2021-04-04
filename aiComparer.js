@@ -12,7 +12,7 @@ const comparer = {
         console.log(ans)
         throw message
     },
-    compare(ai, bi, compareCount) {
+    async compare(ai, bi, compareCount) {
         /*比较两个AI，打印AI比较结果
         * ai和bi两个参数都表示AI，compareCount表示对局次数
          */
@@ -21,7 +21,7 @@ const comparer = {
             win: [0, 0],
             peace: 0
         }
-        for (var i = 0; i < compareCount; i++) {
+        for (let i = 0; i < compareCount; i++) {
             const game = Game.newGame()
             var turn = this.randomInt(0, 2)//turn表示谁是先手
             //让先手翻开牌从而决定每个人的颜色
@@ -29,10 +29,12 @@ const comparer = {
             game.recover(first)
             var computerColor = game.a[first] < 8 ? 0 : 1
             var winner = -1//这场游戏最终的胜利者
+            let round = 0;
             while (true) {
+                round += 1;
                 turn = 1 - turn
                 computerColor = 1 - computerColor
-                const ans = ais[turn].solve(game.a, game.unknown, computerColor)
+                const ans = await ais[turn].solve(game.a, game.unknown, computerColor)
                 if (ans.strategy === null) {
                     //如果返回无解，则表示AI主动认输
                     winner = 1 - turn
@@ -77,7 +79,7 @@ const comparer = {
             } else {
                 statistics.peace++
             }
-            console.log(`第${i}局的结果：${winner}`)
+            console.log(`第${i}局的结果：${winner} round=${round}`)
             Game.show(game.a)
         }
         console.log(`经过${compareCount}次对局，对局结果为:\n${JSON.stringify(statistics, null, 2)}`)

@@ -1,0 +1,22 @@
+{
+  "name": "mammalchess",
+  "version": "1.0.0",
+  "description": "![](./lion.svg)  [兽棋](https://github.com/weiyinfu/MammalChess)",
+  "main": "ai.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weiyinfu/MammalChess.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/weiyinfu/MammalChess/issues"
+  },
+  "homepage": "https://github.com/weiyinfu/MammalChess#readme",
+  "dependencies": {
+    "axios": "^0.21.1"
+  }
+}

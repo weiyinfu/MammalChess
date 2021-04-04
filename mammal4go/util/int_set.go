@@ -1,26 +1,23 @@
-package alphabeta
+package util
 
 import (
-	"github.com/weiyinfu/MammalChess/mammal4go/util"
 	"sort"
 )
 
 type IntSet struct {
-	//无序集合
-	a        []int
-	ma       []int //value=>下标的映射
-	end      int
-	maxSize  int
-	maxValue int
+	//无序集合，用一个集合表示[0,maxSize)
+	a       []int //value集合
+	ma      []int //value=>下标的映射
+	end     int   //value数组元素个数
+	maxSize int   //集合的大小
 }
 
-func NewIntSet(maxSize int, maxValue int) *IntSet {
+func NewIntSet(maxSize int) *IntSet {
 	x := IntSet{
-		a:        make([]int, maxSize),
-		ma:       make([]int, maxSize),
-		end:      0,
-		maxSize:  maxSize,
-		maxValue: maxValue,
+		a:       make([]int, maxSize),
+		ma:      make([]int, maxSize),
+		end:     0,
+		maxSize: maxSize,
 	}
 	for i, _ := range x.ma {
 		x.ma[i] = -1
@@ -70,8 +67,8 @@ func (self *IntSet) Size() int {
 }
 
 func (self *IntSet) Eq(x *IntSet) bool {
-	mine := util.ArrayCopy(self.Get())
-	his := util.ArrayCopy(x.Get())
+	mine := ArrayCopy(self.Get())
+	his := ArrayCopy(x.Get())
 	if len(mine) != len(his) {
 		return false
 	}

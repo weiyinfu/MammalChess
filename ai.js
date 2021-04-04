@@ -248,30 +248,34 @@ function getAi() {
     }
 }
 
+function getUrlAi(url) {
+    return {
+        async solve(a, unknown, computerColor) {
+            //如果提供了AiUrl，则发起HTTP请求获取结果
+            return axios.get(url, {
+                params: {a: a.join(','), computerColor, unknown: unknown.join(',')}
+            }).then(resp => {
+                console.log(`got message from ${url} data=${resp.data}`)
+                return resp.data;
+            })
+        }
+    }
+}
+
 if (typeof (module) != 'undefined') {
     //如果是内部测试
-    module.exports = getAi
+    module.exports = {getAi, getUrlAi}
 } else {
     //this表示子线程中的全局
-    this.addEventListener('message', function (e) {
+    this.addEventListener('message', async function (e) {
         const {a, unknown, maxDepth, computerColor, id, aiUrl} = e.data
-        if (aiUrl) {
-            //如果提供了AiUrl，则发起HTTP请求获取结果
-            axios.get(aiUrl, {
-                params: {a: a.join(','), id, computerColor, unknown: unknown.join(',')}
-            }).then(resp => {
-                console.log(`got message from ${aiUrl} data=${resp.data}`)
-                this.postMessage(resp.data);
-            })
-        } else {
-            if (!(a && unknown && maxDepth && (computerColor === 0 || computerColor === 1))) {
-                throw 'invalid arg'
-            }
-            const ai = getAi()
-            ai.MAX_DEPTH = maxDepth
-            const ans = ai.solve(a, unknown, computerColor)
-            ans.id = id//把id放回去
-            this.postMessage(ans)
+        if (!(a && unknown && maxDepth && (computerColor === 0 || computerColor === 1))) {
+            throw 'invalid arg'
         }
+        const ai = aiUrl ? getUrlAi(aiUrl) : getAi();
+        ai.MAX_DEPTH = maxDepth
+        const ans = await ai.solve(a, unknown, computerColor)
+        ans.id = id//把id放回去
+        this.postMessage(ans)
     }, false);
 }

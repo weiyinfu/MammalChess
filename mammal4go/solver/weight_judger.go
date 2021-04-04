@@ -1,4 +1,4 @@
-package alphabeta
+package solver
 
 var CHESS_WEIGHT = []float64{1280, 640, 320, 160, 80, 40, 20, 10}
 
@@ -6,7 +6,7 @@ type WeightJudger struct {
 }
 
 func (WeightJudger) Judge(x *Node) float64 {
-	//评价局面，总是表示0的好坏
+	//评价局面，总是表示0方的好坏，如果评价1方的好坏，添加符号即可
 	smallScore := 0.0
 	bigScore := 0.0
 	for chess, status := range x.Status {

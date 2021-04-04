@@ -85,10 +85,7 @@ def solve():
     logging.info(f"computer_color={computer_color} board={board} id={req_id}")
     moves = go(board, unknown, computer_color)
     logging.info(f"moves={moves}")
-    resp = make_response(json.dumps({
-        'id': req_id,
-        'strategy': random.choice(moves),
-    }))
+    resp = make_response(json.dumps({'strategy': random.choice(moves)}))
     resp.headers['Access-Control-Allow-Origin'] = '*'
     return resp
 
