@@ -16,7 +16,7 @@ const Game = {
     directions: [[0, 1], [1, 0], [0, -1], [-1, 0]],
     chessCanEat(srcValue, desValue) {
         //判断棋子srcValue是否可以吃掉desValue
-        var srcColor = srcValue < 8, desColor = desValue < 8
+        const srcColor = srcValue < 8, desColor = desValue < 8
         if (srcColor === desColor) return false
         srcValue %= 8
         desValue %= 8
@@ -27,10 +27,10 @@ const Game = {
     },
     show(a) {
         //向控制台打印棋盘
-        for (var i = 0; i < 4; i++) {
-            var line = ''
-            for (var j = 0; j < 4; j++) {
-                var chess = a[i * 4 + j]
+        for (let i = 0; i < 4; i++) {
+            let line = ''
+            for (let j = 0; j < 4; j++) {
+                let chess = a[i * 4 + j]
                 if (chess === 16) chess = '*'
                 else if (chess === 17) chess = '-'
                 else {
@@ -126,14 +126,14 @@ Game.newGame = () => {
             //判断游戏是否结束，当一方棋子被全部吃光时，游戏结束
             //当一方棋子无可行着法时，游戏结束
             var count0 = 0, count1 = 0
-            for (var i = 0; i < this.a.length; i++) {
+            for (let i = 0; i < this.a.length; i++) {
                 if (this.a[i] < 8) {
                     count0++
                 } else if (this.a[i] < 16) {
                     count1++
                 }
             }
-            for (var i of this.unknown) {
+            for (const i of this.unknown) {
                 if (i < 8) count0++
                 else if (i < 16) count1++
             }

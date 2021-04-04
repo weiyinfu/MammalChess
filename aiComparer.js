@@ -1,6 +1,7 @@
 /**
  * AI对比器：比较AI的水平
- * */
+ * js版的ai比较器，使用同步的方式调用AI
+ */
 const Game = require('./game')
 const comparer = {
     randomInt(down, up) {

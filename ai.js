@@ -1,9 +1,11 @@
 if (typeof (importScripts) !== 'undefined') {
     importScripts('game.js')
+    importScripts('https://cdn.bootcdn.net/ajax/libs/axios/0.21.1/axios.min.js')
 }
 if (typeof (require) !== 'undefined') {
     //global表示全局,把这个变量挂载到全局
     global.Game = require('./game.js')
+    global.axios = require("axios")
 }
 if (!Game) {
     throw 'cannot import game.js'
@@ -33,7 +35,7 @@ function getAi() {
             //评价一个局面的好坏，0表示0-7,1代表8-15,只评价局面对0号玩家的好坏，如果0号玩家必胜，那么分数较高
             var chessWight = [1280, 640, 320, 160, 80, 40, 20, 10]
             var smallScore = 0, bigScore = 0
-            for (var i of a) {
+            for (const i of a) {
                 if (i < 8) {
                     smallScore += chessWight[i % 8]
                 } else if (i < 16) {
@@ -41,7 +43,7 @@ function getAi() {
                 }
             }
 
-            for (var i of unkown) {
+            for (const i of unkown) {
                 if (i < 8) {
                     smallScore += chessWight[i % 8]
                 } else {
@@ -252,14 +254,24 @@ if (typeof (module) != 'undefined') {
 } else {
     //this表示子线程中的全局
     this.addEventListener('message', function (e) {
-        const {a, unknown, maxDepth, computerColor, id} = e.data
-        if (!(a && unknown && maxDepth && (computerColor === 0 || computerColor === 1))) {
-            throw 'invalid arg'
+        const {a, unknown, maxDepth, computerColor, id, aiUrl} = e.data
+        if (aiUrl) {
+            //如果提供了AiUrl，则发起HTTP请求获取结果
+            axios.get(aiUrl, {
+                params: {a: a.join(','), id, computerColor, unknown: unknown.join(',')}
+            }).then(resp => {
+                console.log(`got message from ${aiUrl} data=${resp.data}`)
+                this.postMessage(resp.data);
+            })
+        } else {
+            if (!(a && unknown && maxDepth && (computerColor === 0 || computerColor === 1))) {
+                throw 'invalid arg'
+            }
+            const ai = getAi()
+            ai.MAX_DEPTH = maxDepth
+            const ans = ai.solve(a, unknown, computerColor)
+            ans.id = id//把id放回去
+            this.postMessage(ans)
         }
-        const ai = getAi()
-        ai.MAX_DEPTH = maxDepth
-        const ans = ai.solve(a, unknown, computerColor)
-        ans.id = id//把id放回去
-        this.postMessage(ans)
     }, false);
 }

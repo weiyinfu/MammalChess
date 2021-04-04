@@ -173,10 +173,10 @@ function whyNew() {
         0, 17, 17, 5,
         16, 2, 8, 16,
         1, 11, 16, 16]
-    const unknown = [3,6, 4, 7, 9, 10, 15]
+    const unknown = [3, 6, 4, 7, 9, 10, 15]
     ai.verbose.strategyScore = true
     // ai.verbose.leafInfo = true
-    ai.MAX_DEPTH=10
+    ai.MAX_DEPTH = 10
     console.log(ai.solve(a, new Set(unknown), 0))
 }
 

@@ -1,4 +1,5 @@
 <html>
+
 <head>
     <title>一象二狮</title>
     <meta charset="UTF-8">
@@ -7,9 +8,10 @@
     <link rel="stylesheet/less" type="text/css" href="index.less"/>
     <script src="https://cdn.bootcss.com/less.js/3.10.3/less.min.js"></script>
     <script src="https://cdn.bootcss.com/vue/2.6.11/vue.js"></script>
-    <script src="https://cdn.bootcss.com/axios/0.19.2/axios.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/axios/0.21.1/axios.min.js"></script>
     <script src="game.js"></script>
 </head>
+
 <body>
 <div id="main">
     <div class="header">
@@ -20,18 +22,16 @@
         <button @click="newGame">新游戏</button>
         <div>
             <span>静音</span>
-            <input v-model="conf.mute"
-                   type="checkbox"
-                   @change="saveConf"
-                   style="width:100%;height:100%;">
+            <input v-model="conf.mute" type="checkbox" @change="saveConf" style="width:100%;height:100%;">
         </div>
+        <input v-model="aiUrl" placeholder="AI链接" @change="onAiUrlChange">
     </div>
     <!--棋盘区域，4×4个grid-->
     <div class="body" ref="body">
         <div class="board" v-if="game">
             <div v-for="row in 4" style=" display: flex;">
                 <div v-for="col in 4" class="grid" :style="gridStyle(get(row,col))" @click="choose(get(row,col))">
-                    {{get(row,col)==lastMove.src?'💢':getAnimal(game.a[get(row,col)])}}
+                    {{get(row,col)===lastMove.src?'💢':getAnimal(game.a[get(row,col)] )}}
                 </div>
             </div>
         </div>
@@ -45,12 +45,13 @@
     <!--状态栏-->
     <div class="footer" v-if="game">
         <div>
-            <span>您的局势：</span> <span style="background-color: khaki;">{{randomChoose(aiScore<0?emotion.happy:emotion.sad)}}</span>&nbsp;
+            <span>您的局势：</span> <span style="background-color: khaki;">{{randomChoose(aiScore
+                <0?emotion.happy:emotion.sad)}}
+        </span>&nbsp;
         </div>
         <div v-if="game.peaceClock>=game.PEACE_CLOCK*0.5">
             <div class="sep"></div>
-            和棋倒计时：<span
-                style="background-color: khaki">{{game.PEACE_CLOCK-game.peaceClock}}</span>
+            和棋倒计时：<span style="background-color: khaki">{{game.PEACE_CLOCK-game.peaceClock}}</span>
         </div>
         <div>
             <template v-if="lastMove.type==='eat'">
@@ -60,24 +61,32 @@
             </template>
             <template v-else-if="lastMove.type==='recover'">
                 <div class="sep"></div>
-                {{turn===0?'电脑':'您'}}翻出了<span
-                    :style="animalStyle(lastMove.srcChess)">{{getAnimal(lastMove.srcChess)}}</span>
+                {{turn===0?'电脑':'您'}}翻出了
+                <span :style="animalStyle(lastMove.srcChess)">{{getAnimal(lastMove.srcChess)}}</span>
             </template>
             <template v-else-if="lastMove.type==='move'">
                 <div class="sep"></div>
-                {{turn===0?'电脑':'您'}}移动了<span
-                    :style="animalStyle(lastMove.srcChess)">{{getAnimal(lastMove.srcChess)}}</span>
+                {{turn===0?'电脑':'您'}}移动了
+                <span :style="animalStyle(lastMove.srcChess)">{{getAnimal(lastMove.srcChess)}}</span>
             </template>
         </div>
     </div>
-    <audio src="res/capture.wav" ref="capture" preload="auto"></audio><!--有棋子被吃掉-->
-    <audio src="res/click.wav" ref="click" preload="auto"></audio><!--选中棋子的声音-->
-    <audio src="res/move.wav" ref="move" preload="auto"></audio><!--棋子移动音效-->
-    <audio src="res/lose.wav" ref="lose" preload="auto"></audio> <!--你输了音效-->
-    <audio src="res/win.wav" ref="win" preload="auto"></audio> <!--你赢了音效-->
-    <audio src="res/draw.wav" ref="peace" preload="auto"></audio><!--和棋-->
-    <audio src="res/start.wav" ref="start" preload="auto"></audio><!--游戏开始音效-->
-    <audio src="res/illegal.wav" ref="illegal" preload="auto"></audio><!--错误操作音效-->
+    <audio src="res/capture.wav" ref="capture" preload="auto"></audio>
+    <!--有棋子被吃掉-->
+    <audio src="res/click.wav" ref="click" preload="auto"></audio>
+    <!--选中棋子的声音-->
+    <audio src="res/move.wav" ref="move" preload="auto"></audio>
+    <!--棋子移动音效-->
+    <audio src="res/lose.wav" ref="lose" preload="auto"></audio>
+    <!--你输了音效-->
+    <audio src="res/win.wav" ref="win" preload="auto"></audio>
+    <!--你赢了音效-->
+    <audio src="res/draw.wav" ref="peace" preload="auto"></audio>
+    <!--和棋-->
+    <audio src="res/start.wav" ref="start" preload="auto"></audio>
+    <!--游戏开始音效-->
+    <audio src="res/illegal.wav" ref="illegal" preload="auto"></audio>
+    <!--错误操作音效-->
 </div>
 </body>
 <script>
@@ -143,6 +152,7 @@
                 },
                 info: '',//信息框的内容
                 //AI相关
+                aiUrl: "",
                 ai: new Worker("ai.js"),
                 emotion,//表情符号常量列表
                 aiScore: 0,//ai判断出分数
@@ -159,21 +169,44 @@
         },
         mounted() {
             this.loadConf()
+            this.aiUrl = this.parseQuery().aiUrl || "";
             window.onresize = this.updateGridSize
             this.updateGridSize()
             this.newGame()
             this.ai.onerror = (e) => {
                 console.log('AI error :')
-                console.log(e)
+                console.error(e)
+                alert("AI崩溃了")
             }
         },
         methods: {
+            parseQuery() {
+                const url = location.search;
+                const ans = {};
+                if (url.indexOf('?') !== -1) {
+                    const q = url.slice(url.indexOf('?') + 1, url.length);
+                    const kvs = q.split('&');
+                    for (let i of kvs) {
+                        if (i.indexOf('=') !== -1) {
+                            const sep = i.indexOf('=')
+                            ans[i.slice(0, sep)] = decodeURIComponent(i.slice(sep + 1, i.length))
+                        } else {
+                            ans[i] = true;
+                        }
+                    }
+                }
+                console.log(ans);
+                return ans;
+            },
+            onAiUrlChange() {
+                history.pushState(null, null, `?aiUrl=${encodeURIComponent(this.aiUrl)}`)
+            },
             loadConf() {
                 //加载配置
                 if (localStorage.conf)
                     try {
-                        var conf = JSON.parse(localStorage.conf)
-                        for (var i in this.conf) {
+                        const conf = JSON.parse(localStorage.conf)
+                        for (const i in this.conf) {
                             if (conf.hasOwnProperty(i)) {
                                 this.conf[i] = conf[i]
                             }
@@ -203,7 +236,7 @@
             },
             eat(src, des) {
                 //src处的棋子吃掉des处的棋子
-                var eaten = this.game.a[des]
+                const eaten = this.game.a[des]
                 if (eaten !== 17)//如果目标处有棋子，那么就要吃掉它
                 {
                     this.lastMove.type = MOVE_TYPE.eat
@@ -280,8 +313,8 @@
                         return
                     }
                     //如果已经选中棋子
-                    var srcColor = this.game.a[this.chosen] < 8
-                    var desColor = this.game.a[ind] < 8
+                    const srcColor = this.game.a[this.chosen] < 8
+                    const desColor = this.game.a[ind] < 8
                     if (srcColor === desColor) {
                         //颜色相同，改变选择的棋子
                         this.chosen = ind
@@ -306,7 +339,7 @@
             },
             computer() {
                 //用这个随机数作为此次请求的标志
-                const randomKey = Math.floor(Math.random() * 1e9)
+                const randomKey = Math.floor(Math.random() * 1e9) + ""
                 const thinkBeginTime = new Date().getTime()
                 const aiCallback = (ans) => {
                     if (this.turn === TURN.USER) throw '不该着AI下呢'
@@ -314,12 +347,13 @@
                     this.aiScore = ans.score
                     if (op === null) {
                         //如果AI没有作出决策，那么AI认输
+                        console.log("AI没有进行决策，游戏结束")
                         this.over()
                         return
                     }
                     if (op.length === 2) {
-                        var [src, des] = op
-                        var srcColor = this.game.a[src] < 8 ? 0 : 1
+                        const [src, des] = op
+                        const srcColor = this.game.a[src] < 8 ? 0 : 1
                         if (srcColor === this.userColor) {
                             throw 'computer color error'
                         }
@@ -332,6 +366,7 @@
                         if (!this.game.canRecover(op[0])) throw "cannot recover " + op[0]
                         this.recover(op[0])
                     } else {
+                        alert('ai返回的数据格式错误')
                         throw 'AI返回的操作无法识别'
                     }
                     if (this.isOver()) {
@@ -341,7 +376,7 @@
                 }
                 this.ai.onmessage = (event) => {
                     if (event.data.id !== randomKey) {
-                        console.log('got unexpected randomKey')
+                        console.log(`got unexpected randomKey ${randomKey}`)
                         return
                     }
                     //收到AI发回的消息
@@ -350,6 +385,7 @@
                     console.log(event.data)
                     const now = new Date().getTime()
                     if (now - thinkBeginTime < this.conf.minAiTime) {
+                        //如果ai思考的时间不够长，则等待一段时间
                         setTimeout(() => aiCallback(event.data), this.conf.minAiTime - (now - thinkBeginTime))
                     } else {
                         aiCallback(event.data)
@@ -375,6 +411,7 @@
                     computerColor: 1 - this.userColor,
                     maxDepth,
                     id: randomKey,
+                    aiUrl: this.aiUrl,
                 })
             },
             isOver() {
@@ -458,4 +495,5 @@
         haha = new Vue(main)
     }
 </script>
+
 </html>
