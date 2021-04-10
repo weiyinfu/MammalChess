@@ -8,14 +8,14 @@ import (
 type RandSolver struct {
 }
 
-func (RandSolver) Solve(board []int, unknown []int, computerColor int) []int {
+func (RandSolver) Solve(board []int, unknown []int, computerColor int) *SolveResult {
 	//随机走子
 	moves := GetAllMoves(board, computerColor)
 	if len(moves) == 0 {
 		return nil
 	}
 	ind := rand.Intn(len(moves))
-	return moves[ind]
+	return &SolveResult{Strategy: moves[ind], Score: 0}
 }
 func GetAllMoves(board []int, computerColor int) [][]int {
 	var moves [][]int

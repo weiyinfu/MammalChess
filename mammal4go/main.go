@@ -13,13 +13,6 @@ import (
 /**
 使用golang实现超级深的搜索，打造无敌AI
 */
-
-var ai solver.Solver
-
-func init() {
-	ai = solver.NewAlphaBetaSolver(10, 1)
-}
-
 func main() {
 	x := gin.Default()
 	x.GET("/test", func(context *gin.Context) {
@@ -46,10 +39,10 @@ func main() {
 			panic("解析computerColor失败")
 		}
 		log.Print(fmt.Sprintf("board=%v,unknown=%v,computerColor=%v", board, unKnown, computerColorI))
-		strategy := ai.Solve(board, unKnown, computerColorI)
-		context.JSON(http.StatusOK, gin.H{
-			"strategy": strategy,
-		})
+		//所使用的AI
+		ai := solver.NewAlphaBetaSolver(10, 1)
+		resp := ai.Solve(board, unKnown, computerColorI)
+		context.JSON(http.StatusOK, resp)
 	})
 	_ = x.Run("0.0.0.0:7788")
 }

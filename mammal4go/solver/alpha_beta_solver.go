@@ -25,17 +25,19 @@ func NewAlphaBetaSolver(maxDepth int, maxRecover int) *AlphaBetaSolver {
 	}
 }
 
-func (self *AlphaBetaSolver) Solve(board []int, unknown []int, computerColor int) []int {
+func (self *AlphaBetaSolver) Solve(board []int, unknown []int, computerColor int) *SolveResult {
 	no := NewNode(board, unknown)
 	m := self.SolveNode(no, computerColor)
 	if m == nil {
 		return nil
 	}
+	var strategy []int
 	if m.Type == MOVE_EAT {
-		return []int{m.Src, m.Des}
+		strategy = []int{m.Src, m.Des}
 	} else {
-		return []int{m.Src}
+		strategy = []int{m.Src}
 	}
+	return &SolveResult{Strategy: strategy, Score: self.moves[*m]}
 }
 func (self *AlphaBetaSolver) SolveNode(node *Node, computerColor int) *Move {
 	self.moves = map[Move]float64{} //运行之前，清空move记录

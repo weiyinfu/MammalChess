@@ -49,8 +49,12 @@ func init() {
 	}
 }
 
+type SolveResult struct {
+	Strategy []int   `json:"strategy"`
+	Score    float64 `json:"score"`
+}
 type Solver interface {
-	Solve(a []int, unknown []int, computerColor int) []int
+	Solve(a []int, unknown []int, computerColor int) *SolveResult
 }
 
 type Node struct {
